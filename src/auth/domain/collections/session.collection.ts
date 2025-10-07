@@ -20,9 +20,33 @@ export class SessionCollection extends EntityCollection<Session> {
         return new SessionCollection(sessions);
     }
 
+    revokeExpired(): number {
+        let count = 0;
+        for (const session of this.getAll()) {
+            if (!session.revoked && session.expired) {
+                session.revoke();
+                count++;
+            }
+        }
+        return count;
+    }
+
+    revokeInactive(): number {
+        let count = 0;
+        for (const session of this.getAll()) {
+            if (!session.revoked && !session.active) {
+                session.revoke();
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /* getters */
+
     /* Returns most recently created session */
-    get mostRecent(): Session {
-        return this.sortByRecent()[0];
+    get mostRecent(): Session | null {
+        return this.sortByRecent()[0] ?? null;
     }
 
     /* Returns only the active sessions for a user */
@@ -35,7 +59,7 @@ export class SessionCollection extends EntityCollection<Session> {
         return this.active.length;
     }
 
-    getbyIP(ip: IpAddress): Session[] {
+    getByIP(ip: IpAddress): Session[] {
         return this.getAll().filter((s) => s.ipAddress === ip);
     }
 

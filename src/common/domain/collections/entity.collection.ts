@@ -32,7 +32,7 @@ export abstract class EntityCollection<T extends Identifiable> {
         return Array.from(this.items.values());
     }
 
-    count(): number {
+    get count(): number {
         return this.items.size;
     }
 }

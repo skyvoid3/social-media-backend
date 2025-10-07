@@ -1,18 +1,22 @@
 import { RefreshToken } from '../entities/refresh-token.entity';
-import { RefreshTokenProps } from '../types';
+import { RefreshTokenProps } from '../props';
 import { JwtTokenId } from '../value-objects/jwt-token-id.vo';
 import { ExpiresAt } from 'src/common/domain/identity/value-objects/expires-at.vo';
 import { DateTime } from 'src/common/domain/utils/date-time';
-import { CreateRefreshTokenParams } from '../params';
 import { SessionId } from '../value-objects/session-id.vo';
+import { JwtToken } from '../value-objects/token.vo';
 
 export class RefreshTokenFactory {
-    static createNew(params: CreateRefreshTokenParams, sessionId: SessionId): RefreshToken {
+    static createNew(
+        token: JwtToken,
+        sessionId: SessionId,
+        params?: { expiresInDays?: number },
+    ): RefreshToken {
         const props: RefreshTokenProps = {
             id: JwtTokenId.create(),
             sessionId,
-            token: params.token,
-            expiresAt: ExpiresAt.create(DateTime.now().add({ days: params.expiresInDays })),
+            token,
+            expiresAt: ExpiresAt.create(DateTime.now().add({ days: params?.expiresInDays ?? 7 })),
         };
 
         return RefreshToken.create(props);
