@@ -5,7 +5,19 @@ import { CreatedAt } from 'src/common/domain/identity/value-objects/created-at.v
 import { RefreshTokenProps } from '../props';
 import { JwtTokenId } from '../value-objects/jwt-token-id.vo';
 import { RevokedAt } from 'src/common/domain/identity/value-objects/revoked-at.vo';
+import { DateTime } from 'src/common/domain/utils/date-time';
 
+/*
+ * RefreshToken entity used across auth domain.
+ * The refreshToken is stored inside Session.
+ * Each session can have only one refresh token
+ *
+ * This entity class enforces validation, equality semantics across auth domain
+ * Also provides methods for token revokation
+ *
+ * The factory methods enforces that tokens expire after 7 days. No external functions can
+ * change that parameter
+ */
 export class RefreshToken {
     private _id: JwtTokenId;
     private _sessionId: SessionId;
@@ -18,7 +30,8 @@ export class RefreshToken {
         this._id = props.id;
         this._sessionId = props.sessionId;
         this._token = props.token;
-        this._expiresAt = props.expiresAt;
+        // Expires after 7 days. The DateTime class will be changed to a more readable model
+        this._expiresAt = ExpiresAt.create(DateTime.now().add({ days: 7 }));
         this._createdAt = props.createdAt ?? CreatedAt.now();
         this._revokedAt = props.revokedAt ?? RevokedAt.none();
     }
@@ -26,6 +39,14 @@ export class RefreshToken {
     public static create(props: RefreshTokenProps): RefreshToken {
         return new RefreshToken(props);
     }
+
+    revoke(): void {
+        if (!this._revokedAt.isRevoked()) {
+            this._revokedAt = RevokedAt.now();
+        }
+    }
+
+    /* getters */
 
     get id(): JwtTokenId {
         return this._id;
@@ -46,13 +67,11 @@ export class RefreshToken {
         return this._revokedAt.isRevoked();
     }
 
-    revoke(): void {
-        if (!this._revokedAt.isRevoked()) {
-            this._revokedAt = RevokedAt.now();
-        }
+    get expired(): boolean {
+        return this._expiresAt.isExpired();
     }
 
-    isActive(): boolean {
-        return !this._revokedAt.isRevoked() && !this._expiresAt.isExpired();
+    get active(): boolean {
+        return !this.revoked && !this.expired;
     }
 }

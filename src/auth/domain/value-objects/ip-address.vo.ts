@@ -1,6 +1,14 @@
 import { ValueObjectError } from 'src/common/domain/errors/value-object.error';
 import { isIP } from 'net';
 
+/*
+ * Domain representation of IP Address
+ *
+ * This value-object enforces validation, normalization,
+ * and equality semantics within the domain layer
+ *
+ * Gives ability to check the IP version (4 or 6)
+ */
 export class IpAddress {
     private constructor(private readonly val: string) {}
 

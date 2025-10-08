@@ -6,6 +6,7 @@ import { JwtTokenId } from '../value-objects/jwt-token-id.vo';
 import { RevokedAt } from 'src/common/domain/identity/value-objects/revoked-at.vo';
 import { UserId } from 'src/common/domain/identity/value-objects/user-id.vo';
 import { AccessTokenProps } from '../props';
+import { DateTime } from 'src/common/domain/utils/date-time';
 
 export class AccessToken {
     private _id: JwtTokenId;
@@ -21,7 +22,8 @@ export class AccessToken {
         this._sessionId = props.sessionId;
         this._userId = props.userId;
         this._token = props.token;
-        this._expiresAt = props.expiresAt;
+        // Expires after 7 days.
+        this._expiresAt = ExpiresAt.create(DateTime.now().add({ days: 7 }));
         this._createdAt = props.createdAt ?? CreatedAt.now();
         this._revokedAt = props.revokedAt ?? RevokedAt.none();
     }
@@ -29,6 +31,14 @@ export class AccessToken {
     public static create(props: AccessTokenProps): AccessToken {
         return new AccessToken(props);
     }
+
+    revoke(): void {
+        if (!this._revokedAt.isRevoked()) {
+            this._revokedAt = RevokedAt.now();
+        }
+    }
+
+    /* getters */
 
     get id(): JwtTokenId {
         return this._id;
@@ -54,17 +64,15 @@ export class AccessToken {
         return this._createdAt;
     }
 
+    get expired(): boolean {
+        return this._expiresAt.isExpired();
+    }
+
     get revoked(): boolean {
         return this._revokedAt.isRevoked();
     }
 
-    revoke(): void {
-        if (!this._revokedAt.isRevoked()) {
-            this._revokedAt = RevokedAt.now();
-        }
-    }
-
-    isActive(): boolean {
-        return !this._revokedAt.isRevoked() && !this._expiresAt.isExpired();
+    get active(): boolean {
+        return !this.revoked && !this.expired;
     }
 }

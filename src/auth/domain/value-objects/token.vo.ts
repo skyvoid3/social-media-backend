@@ -1,27 +1,27 @@
-import { ValueObjectError } from 'src/common/domain/errors/value-object.error';
 import { JWT_TOKEN_REGEX } from 'src/common/domain/identity/regex';
+import { validateByRegex } from 'src/common/domain/utils/validate-string';
 
+/*
+ * Domain representation of JwtToken used for authentication, authorization,
+ * session managment
+ *
+ * This value-object enforces validation, normalization,
+ * and equality semantics within the domain layer
+ */
 export class JwtToken {
-    private constructor(private readonly val: string) {}
+    private constructor(private readonly _value: string) {}
 
-    static create(val: string): JwtToken {
-        const normalized = val.trim();
-        if (!normalized || !JwtToken.isValid(normalized)) {
-            throw new ValueObjectError('Invalid token format');
-        }
-
+    static create(value: string): JwtToken {
+        const normalized = value.trim();
+        validateByRegex(normalized, JWT_TOKEN_REGEX, 'jwt-token');
         return new JwtToken(normalized);
     }
 
-    private static isValid(val: string): boolean {
-        return JWT_TOKEN_REGEX.test(val);
-    }
-
     get value(): string {
-        return this.val;
+        return this._value;
     }
 
     public equals(other: JwtToken): boolean {
-        return this.val === other.val;
+        return this._value === other._value;
     }
 }

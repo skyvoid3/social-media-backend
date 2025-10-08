@@ -1,27 +1,21 @@
-import { ValueObjectError } from 'src/common/domain/errors/value-object.error';
 import { EMAIL_REGEX } from 'src/common/domain/identity/regex';
+import { validateByRegex } from 'src/common/domain/utils/validate-string';
 
+/*
+ * Domain representation of Email
+ *
+ * This value-object enforces validation, normalization,
+ * and equality semantics within the domain layer
+ */
 export class Email {
-    private constructor(private readonly val: string) {}
+    private constructor(private readonly _value: string) {}
 
-    static create(val: string): Email {
-        const normalized = val.trim();
-        if (!normalized || !Email.isValid(normalized)) {
-            throw new ValueObjectError('Invalid email format');
-        }
-
+    static create(value: string) {
+        const normalized = validateByRegex(value, EMAIL_REGEX, 'email');
         return new Email(normalized);
     }
 
-    private static isValid(val: string): boolean {
-        return EMAIL_REGEX.test(val);
-    }
-
     get value(): string {
-        return this.val;
-    }
-
-    public equals(other: Email): boolean {
-        return this.val === other.val;
+        return this._value;
     }
 }

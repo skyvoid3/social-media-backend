@@ -1,26 +1,21 @@
-import { ValueObjectError } from 'src/common/domain/errors/value-object.error';
 import { USERNAME_REGEX } from 'src/common/domain/identity/regex';
+import { validateByRegex } from 'src/common/domain/utils/validate-string';
 
+/*
+ * Domain representation of Username
+ *
+ * This value-object enforces validation, normalization,
+ * and equality semantics within the domain layer
+ */
 export class Username {
-    private constructor(private readonly val: string) {}
+    private constructor(private readonly _value: string) {}
 
-    public static create(val: string): Username {
-        const normalized = val.trim();
-        if (!normalized || !Username.isValid(normalized)) {
-            throw new ValueObjectError('Invalid username format');
-        }
+    static create(value: string) {
+        const normalized = validateByRegex(value, USERNAME_REGEX, 'username');
         return new Username(normalized);
     }
 
-    private static isValid(val: string): boolean {
-        return USERNAME_REGEX.test(val);
-    }
-
     get value(): string {
-        return this.val;
-    }
-
-    public equals(other: Username): boolean {
-        return this.val === other.val;
+        return this._value;
     }
 }

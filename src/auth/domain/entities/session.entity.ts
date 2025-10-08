@@ -9,13 +9,11 @@ import { RevokedAt } from 'src/common/domain/identity/value-objects/revoked-at.v
 import { UserId } from 'src/common/domain/identity/value-objects/user-id.vo';
 import { EntityError } from 'src/common/domain/errors/entity.error';
 import { UpdatedAt } from 'src/common/domain/identity/value-objects/updated-at.vo';
-import { DateTime } from 'src/common/domain/utils/date-time';
 
 export class Session {
     private _id: SessionId;
     private _createdAt: CreatedAt;
     private _updatedAt: UpdatedAt;
-    private _expiresAt: ExpiresAt;
     private _refreshToken: RefreshToken;
     private _userAgent: UserAgent;
     private _ipAddress: IpAddress;
@@ -26,7 +24,6 @@ export class Session {
         this._id = props.id;
         this._createdAt = props.createdAt ?? CreatedAt.now();
         this._updatedAt = props.updatedAt ?? UpdatedAt.now();
-        this._expiresAt = props.expiresAt;
         this._refreshToken = props.refreshToken;
         this._userAgent = props.userAgent;
         this._ipAddress = props.ipAddress;
@@ -35,6 +32,9 @@ export class Session {
     }
 
     public static create(props: SessionProps) {
+        if (!props.refreshToken.active) {
+            throw new EntityError('Cannot create a session with inactive refresh token');
+        }
         return new Session(props);
     }
 
@@ -70,7 +70,7 @@ export class Session {
         return this._createdAt;
     }
     get expiresAt(): ExpiresAt {
-        return this._expiresAt;
+        return this.refreshToken.expiresAt;
     }
     get refreshToken(): RefreshToken {
         return this._refreshToken;

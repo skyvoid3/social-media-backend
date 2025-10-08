@@ -1,5 +1,11 @@
 import { ValueObjectError } from 'src/common/domain/errors/value-object.error';
 
+/*
+ * Domain representation of User-Agent
+ *
+ * This value-object enforces validation, normalization,
+ * and equality semantics within the domain layer
+ */
 export class UserAgent {
     private constructor(private readonly val: string) {}
 

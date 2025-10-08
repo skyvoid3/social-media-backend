@@ -8,16 +8,23 @@ import { JwtTokenId } from './value-objects/jwt-token-id.vo';
 import { RevokedAt } from 'src/common/domain/identity/value-objects/revoked-at.vo';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { UserId } from 'src/common/domain/identity/value-objects/user-id.vo';
-import { Role } from 'src/users/domain/value-objects/roles.vo';
 import { UpdatedAt } from 'src/common/domain/identity/value-objects/updated-at.vo';
 
+/**
+ * Common interface pattern used to define the set of strongly typed
+ * domain properties (Value Objects or primitives) required to create
+ * or rehydrate an Entity or Aggregate Root.
+ *
+ * These `Props` interfaces are typically passed into entity factory
+ * methods or constructors to ensure domain invariants and maintain
+ * type safety within the domain layer.
+ */
 export interface SessionProps {
     id: SessionId;
     refreshToken: RefreshToken;
     createdAt?: CreatedAt;
     updatedAt?: UpdatedAt;
     revokedAt?: RevokedAt;
-    expiresAt: ExpiresAt;
     ipAddress: IpAddress;
     userAgent: UserAgent;
     userId: UserId;
@@ -27,7 +34,6 @@ export interface RefreshTokenProps {
     id: JwtTokenId;
     sessionId: SessionId;
     token: JwtToken;
-    expiresAt: ExpiresAt;
     createdAt?: CreatedAt;
     revokedAt?: RevokedAt;
 }
@@ -37,12 +43,6 @@ export interface AccessTokenProps {
     sessionId: SessionId;
     userId: UserId;
     token: JwtToken;
-    expiresAt: ExpiresAt;
     createdAt?: CreatedAt;
     revokedAt?: RevokedAt;
-}
-
-export interface JwtTokenPayloadProps {
-    userId: UserId;
-    role: Role;
 }

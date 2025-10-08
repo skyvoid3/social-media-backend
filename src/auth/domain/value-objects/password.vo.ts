@@ -1,26 +1,21 @@
-import { ValueObjectError } from 'src/common/domain/errors/value-object.error';
 import { PASSWORD_REGEX } from 'src/common/domain/identity/regex';
+import { validateByRegex } from 'src/common/domain/utils/validate-string';
 
+/*
+ * Domain representation of Password
+ *
+ * This value-object enforces validation, normalization,
+ * and equality semantics within the domain layer
+ */
 export class Password {
-    private constructor(private readonly val: string) {}
+    private constructor(private readonly _value: string) {}
 
-    static create(val: string): Password {
-        if (!val.trim() || !Password.isValid(val)) {
-            throw new ValueObjectError('Invalid password format');
-        }
-
-        return new Password(val);
-    }
-
-    private static isValid(password: string): boolean {
-        return PASSWORD_REGEX.test(password);
+    static create(value: string) {
+        const normalized = validateByRegex(value, PASSWORD_REGEX, 'password');
+        return new Password(normalized);
     }
 
     get value(): string {
-        return this.val;
-    }
-
-    public equals(other: Password): boolean {
-        return this.val === other.val;
+        return this._value;
     }
 }
