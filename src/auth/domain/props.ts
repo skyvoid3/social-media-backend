@@ -44,5 +44,4 @@ export interface AccessTokenProps {
     userId: UserId;
     token: JwtToken;
     createdAt?: CreatedAt;
-    revokedAt?: RevokedAt;
 }

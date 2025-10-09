@@ -4,8 +4,8 @@ import { Username } from 'src/auth/domain/value-objects/username.vo';
 import { UserId } from 'src/common/domain/identity/value-objects/user-id.vo';
 import { CreatedAt } from 'src/common/domain/identity/value-objects/created-at.vo';
 import { UpdatedAt } from 'src/common/domain/identity/value-objects/updated-at.vo';
-import { Session } from '../../auth/domain/entities/session.entity';
 import { MediaURL } from 'src/common/domain/identity/value-objects/media-url.vo';
+import { SessionCollection } from 'src/auth/domain/collections/session.collection';
 
 export type UserProps = {
     id: UserId;
@@ -15,5 +15,5 @@ export type UserProps = {
     avatar?: MediaURL;
     createdAt?: CreatedAt;
     updatedAt?: UpdatedAt;
-    sessions?: Session[];
+    sessions?: SessionCollection;
 };

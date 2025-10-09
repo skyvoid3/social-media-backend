@@ -7,7 +7,6 @@ import { CreatedAt } from 'src/common/domain/identity/value-objects/created-at.v
 import { UpdatedAt } from 'src/common/domain/identity/value-objects/updated-at.vo';
 import { Session } from '../../../auth/domain/entities/session.entity';
 import { SessionId } from 'src/auth/domain/value-objects/session-id.vo';
-import { RefreshToken } from 'src/auth/domain/entities/refresh-token.entity';
 import { MediaURL } from 'src/common/domain/identity/value-objects/media-url.vo';
 import { SessionCollection } from 'src/auth/domain/collections/session.collection';
 
@@ -16,23 +15,19 @@ export class User {
     private _email: Email;
     private _username: Username;
     private _password: Password;
-    private _avatar?: MediaURL;
+    private _avatar?: MediaURL | null;
     private _createdAt: CreatedAt;
     private _updatedAt: UpdatedAt;
-    private _sessions: Map<string, Session>;
+    private _sessions: SessionCollection;
 
     private constructor(props: UserProps) {
         this._id = props.id;
         this._email = props.email;
         this._username = props.username;
         this._password = props.password;
-        this._avatar = props.avatar;
+        this._avatar = props.avatar ?? null;
         this._createdAt = props.createdAt ?? CreatedAt.now();
         this._updatedAt = props.updatedAt ?? UpdatedAt.now();
-        /* Converting sessions array to a map for faster operations */
-        this._sessions = props.sessions
-            ? new Map<string, Session>(props.sessions.map((s) => [s.id.value, s]))
-            : new Map<string, Session>();
     }
 
     static create(props: UserProps) {
@@ -42,43 +37,18 @@ export class User {
     /* session managment */
 
     addSession(session: Session): this {
-        this._sessions.set(session.id.value, session);
+        this._sessions.add(session);
+
         return this;
     }
 
     removeSession(sessionId: SessionId): this {
-        this._sessions.delete(sessionId.value);
+        this._sessions.remove(sessionId);
         return this;
     }
 
     getSession(sessionId: SessionId): Session | undefined {
-        return this._sessions.get(sessionId.value);
-    }
-
-    revokeSession(sessionId: SessionId): this {
-        const session = this._sessions.get(sessionId.value);
-        if (session) session.revoke();
-        return this;
-    }
-
-    rotateSessionToken(sessionId: SessionId, newToken: RefreshToken): this {
-        const session = this._sessions.get(sessionId.value);
-        if (session) session.rotateRefreshToken(newToken);
-        return this;
-    }
-
-    revokeAllSessions(): this {
-        this._sessions.forEach((session) => session.revoke());
-        return this;
-    }
-
-    revokeOtherSessions(currentSessionId: SessionId): this {
-        this._sessions.forEach((session) => {
-            if (session.id.value !== currentSessionId.value) {
-                session.revoke();
-            }
-        });
-        return this;
+        return this._sessions.getById(sessionId);
     }
 
     /* updates */
@@ -127,8 +97,8 @@ export class User {
     get password(): Password {
         return this._password;
     }
-    get avatar(): MediaURL | undefined {
-        return this._avatar;
+    get avatar(): MediaURL | null {
+        return this._avatar ?? null;
     }
     get createdAt(): CreatedAt {
         return this._createdAt;
@@ -138,13 +108,11 @@ export class User {
     }
 
     get sessions(): SessionCollection {
-        return SessionCollection.create(Array.from(this._sessions.values()));
+        return this._sessions;
     }
 
-    /* Converts sessions into array and passes it to the factory of SessionCollection class */
-    get activeSessions(): SessionCollection {
-        return SessionCollection.create(
-            Array.from(this._sessions.values()).filter((s) => !s.revoked),
-        );
+    /* Returns an array of active sessions*/
+    get activeSessions(): Session[] {
+        return this._sessions.active;
     }
 }

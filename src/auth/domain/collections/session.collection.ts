@@ -2,21 +2,34 @@ import { EntityCollection } from 'src/common/domain/collections/entity.collectio
 import { Session } from 'src/auth/domain/entities/session.entity';
 import { IpAddress } from '../value-objects/ip-address.vo';
 import { UserAgent } from '../value-objects/user-agent.vo';
+import { ValueObjectError } from 'src/common/domain/errors/value-object.error';
 
-/* The lookups are O(n). But this is not an issue because a user can have only 5 sessions
- * better design will be in the future
+/*
+ * SessionCollection used anywhere where there is need of working with Session entity array
  *
+ * Inherits from EntityCollection base class
  *
- * User can have maximum 5 sessions at the same time. Later this number can be changed
+ * The methods are in O(n) time, although its not a big concern
+ * because SessionCollection can not have more than 5 items inside
  */
 export class SessionCollection extends EntityCollection<Session> {
-    sortByRecent(): Session[] {
-        return this.getAll().sort(
-            (a, b) => b.createdAt.time.toMillis() - a.createdAt.time.toMillis(),
-        );
+    private readonly maxItems = 5;
+
+    /* This function overrides the original add() method of base class to
+     * enforce limits on SessionCollection class
+     */
+    add(session: Session) {
+        if (this.items.size >= this.maxItems) {
+            throw new ValueObjectError('SessionCollection can not have more than 5 sessions');
+        }
+
+        super.add(session);
     }
 
     public static create(sessions: Session[]): SessionCollection {
+        if (sessions.length > 5) {
+            throw new ValueObjectError('SessionCollection can not have more than 5 sessions');
+        }
         return new SessionCollection(sessions);
     }
 
@@ -42,6 +55,12 @@ export class SessionCollection extends EntityCollection<Session> {
         return count;
     }
 
+    sortByRecent(): Session[] {
+        return this.getAll().sort(
+            (a, b) => b.createdAt.time.toMillis() - a.createdAt.time.toMillis(),
+        );
+    }
+
     /* getters */
 
     /* Returns most recently created session */
@@ -50,13 +69,13 @@ export class SessionCollection extends EntityCollection<Session> {
     }
 
     /* Returns only the active sessions for a user */
-    get active(): Session[] {
+    get activeSessions(): Session[] {
         return this.getAll().filter((s) => s.revoked === false);
     }
 
     /* Returns number of active sessions of a user */
     get activeCount(): number {
-        return this.active.length;
+        return this.activeSessions.length;
     }
 
     getByIP(ip: IpAddress): Session[] {

@@ -17,6 +17,7 @@ export interface UsersRepository {
     findById(id: UserId): Promise<User | null>;
     findAll(pagination: PaginatedSearch, params: FindAllUsersParams): Promise<UserCollection>;
     findByEmail(email: Email): Promise<User | null>;
+    existsById(id: UserId): Promise<boolean>;
     existsByEmail(email: Email): Promise<boolean>;
     existsByUsername(username: string): Promise<boolean>;
     save(user: User): Promise<User>;

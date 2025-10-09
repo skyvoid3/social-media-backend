@@ -3,11 +3,21 @@ import { SessionId } from '../value-objects/session-id.vo';
 import { JwtToken } from '../value-objects/token.vo';
 import { CreatedAt } from 'src/common/domain/identity/value-objects/created-at.vo';
 import { JwtTokenId } from '../value-objects/jwt-token-id.vo';
-import { RevokedAt } from 'src/common/domain/identity/value-objects/revoked-at.vo';
 import { UserId } from 'src/common/domain/identity/value-objects/user-id.vo';
 import { AccessTokenProps } from '../props';
 import { DateTime } from 'src/common/domain/utils/date-time';
 
+/*
+ * AccessToken entity used across auth domain.
+ * The accessToken is issued by session and is saved in memory
+ *
+ *
+ * This entity class enforces validation, equality semantics across auth domain
+ *
+ *
+ * The factory methods enforces that tokens expire after 1 hour. No external functions can
+ * change that parameter
+ */
 export class AccessToken {
     private _id: JwtTokenId;
     private _sessionId: SessionId;
@@ -15,27 +25,19 @@ export class AccessToken {
     private _token: JwtToken;
     private _expiresAt: ExpiresAt;
     private _createdAt: CreatedAt;
-    private _revokedAt: RevokedAt;
 
     private constructor(props: AccessTokenProps) {
         this._id = props.id;
         this._sessionId = props.sessionId;
         this._userId = props.userId;
         this._token = props.token;
-        // Expires after 7 days.
-        this._expiresAt = ExpiresAt.create(DateTime.now().add({ days: 7 }));
+        // Expires after 1 hour.
+        this._expiresAt = ExpiresAt.create(DateTime.now().add({ hours: 1 }));
         this._createdAt = props.createdAt ?? CreatedAt.now();
-        this._revokedAt = props.revokedAt ?? RevokedAt.none();
     }
 
     public static create(props: AccessTokenProps): AccessToken {
         return new AccessToken(props);
-    }
-
-    revoke(): void {
-        if (!this._revokedAt.isRevoked()) {
-            this._revokedAt = RevokedAt.now();
-        }
     }
 
     /* getters */
@@ -68,11 +70,12 @@ export class AccessToken {
         return this._expiresAt.isExpired();
     }
 
-    get revoked(): boolean {
-        return this._revokedAt.isRevoked();
-    }
-
-    get active(): boolean {
-        return !this.revoked && !this.expired;
+    /**
+     * Checks equality with another AccessToken.
+     * Tokens are equal if their IDs are the same.
+     */
+    public equals(other: AccessToken): boolean {
+        if (!other) return false;
+        return this._id.equals(other.id);
     }
 }

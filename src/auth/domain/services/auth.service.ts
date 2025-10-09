@@ -4,7 +4,6 @@ import { Session } from '../entities/session.entity';
 import { SessionId } from '../value-objects/session-id.vo';
 import { JwtTokenId } from '../value-objects/jwt-token-id.vo';
 import { DomainServiceError } from 'src/common/domain/errors/domain-service.error';
-import { EntityError } from 'src/common/domain/errors/entity.error';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { UserAgent } from '../value-objects/user-agent.vo';
 import { IpAddress } from '../value-objects/ip-address.vo';
@@ -13,6 +12,22 @@ import { SessionCollection } from '../collections/session.collection';
 import { AccessTokenProps, RefreshTokenProps, SessionProps } from '../props';
 import { AccessToken } from '../entities/access-token.entity';
 
+/**
+ * Domain Layer Service — AuthService
+ *
+ * The AuthService coordinates domain entities, value objects, and repository contracts
+ * to implement authentication-related business logic.
+ *
+ * Responsibilities include:
+ * - Managing multiple active sessions per user.
+ * - Handling refresh and access token rotation.
+ * - Issuing new tokens for authenticated users.
+ * - Revoking expired or inactive sessions.
+ * - Enforcing domain rules around session lifecycle and token validity.
+ *
+ * This service operates purely within the domain layer and does not handle
+ * transport, HTTP concerns, or persistence details directly.
+ */
 export class AuthService {
     /* Dependency Injection. */
     constructor(private readonly authRepo: AuthRepository) {}
@@ -32,9 +47,7 @@ export class AuthService {
      *
      * @returns {Promise<Session>} A promise resolving to the newly created Session entity.
      *
-     * @throws {EntityError} If the refresh token is inactive or session creation violates domain rules.
-     * @throws {EntityError} If persisting the session in the repository fails.
-     * TODO: ADD ERROR HANDLING
+     * @throws {DomainServiceError} If Session creation or authRepo throws error
      */
     async createSession(
         userAgent: UserAgent,
@@ -43,10 +56,9 @@ export class AuthService {
         token: JwtToken,
     ): Promise<Session> {
         const sessionId = SessionId.create();
-        const refreshTokenId = JwtTokenId.create();
 
         const refreshTokenProps: RefreshTokenProps = {
-            id: refreshTokenId,
+            id: JwtTokenId.create(),
             sessionId: sessionId,
             token,
         };
@@ -61,11 +73,15 @@ export class AuthService {
             refreshToken,
         };
 
-        const session = Session.create(sessionProps);
+        try {
+            const session = Session.create(sessionProps);
 
-        await this.authRepo.saveSession(session);
+            await this.authRepo.saveSession(session);
 
-        return session;
+            return session;
+        } catch (err) {
+            throw new DomainServiceError('Failed to create new session', { cause: err });
+        }
     }
 
     /**
@@ -78,16 +94,25 @@ export class AuthService {
      *
      * @returns {Promise<boolean>} A promise resolving to `true` if the session was revoked,
      *                             or `false` if the session was not found or already revoked.
+     *
+     * @throws {DomainServiceError} if the authRepo throws error
      */
-    async revokeSession(sessionId: SessionId): Promise<boolean> {
-        const session = await this.authRepo.findSessionById(sessionId);
-        if (!session || session.revoked) {
-            return false;
-        }
 
-        session.revoke();
-        await this.authRepo.saveSession(session);
-        return true;
+    async revokeSession(sessionId: SessionId): Promise<boolean> {
+        try {
+            const session = await this.authRepo.findSessionById(sessionId);
+            if (!session || session.revoked) {
+                return false;
+            }
+
+            session.revoke();
+
+            await this.authRepo.saveSession(session);
+
+            return true;
+        } catch (err) {
+            throw new DomainServiceError('Failed to revoke session', { cause: err });
+        }
     }
 
     /**
@@ -101,21 +126,27 @@ export class AuthService {
      * @returns {Promise<boolean>} A promise resolving to:
      *                             - `true` if all active sessions were successfully revoked.
      *                             - `false` if the number of revoked sessions did not match the number of active sessions.
+     *
+     * @throws {DomainServiceError} if authRepo throws error
      */
     async revokeAllSessionsForUser(userId: UserId): Promise<boolean> {
-        const activeSessions = await this.authRepo.countActiveSessionsForUser(userId);
+        try {
+            const activeSessions = await this.authRepo.countActiveSessionsForUser(userId);
 
-        if (!activeSessions) {
+            if (!activeSessions) {
+                return true;
+            }
+
+            const revokedSessions = await this.authRepo.revokeAllSessionsForUser(userId);
+
+            if (activeSessions !== revokedSessions) {
+                return false;
+            }
+
             return true;
+        } catch (err) {
+            throw new DomainServiceError('Failed to revoked all sessions for user', { cause: err });
         }
-
-        const revokedSessions = await this.authRepo.revokeAllSessionsForUser(userId);
-
-        if (activeSessions !== revokedSessions) {
-            return false;
-        }
-
-        return true;
     }
 
     /**
@@ -133,16 +164,14 @@ export class AuthService {
      * @throws {DomainServiceError} If the session is not found or token rotation fails.
      */
     async rotateRefreshToken(token: JwtToken, sessionId: SessionId): Promise<RefreshToken> {
-        const session = await this.authRepo.findSessionByToken(sessionId);
-        if (!session) {
-            throw new DomainServiceError('Session not found');
-        }
-
         try {
-            const refreshTokenId = JwtTokenId.create();
+            const session = await this.authRepo.findSessionById(sessionId);
+            if (!session) {
+                throw new DomainServiceError('Session not found');
+            }
 
             const refreshTokenProps: RefreshTokenProps = {
-                id: refreshTokenId,
+                id: JwtTokenId.create(),
                 sessionId: sessionId,
                 token,
             };
@@ -154,11 +183,8 @@ export class AuthService {
             await this.authRepo.saveSession(session);
 
             return newRefreshToken;
-        } catch (error) {
-            if (error instanceof EntityError) {
-                throw new DomainServiceError(`Failed to rotate token: ${error.message}`);
-            }
-            throw error;
+        } catch (err) {
+            throw new DomainServiceError('Failed to rotate token', { cause: err });
         }
     }
 
@@ -183,26 +209,28 @@ export class AuthService {
         refreshToken: JwtToken,
         accessToken: JwtToken,
     ): Promise<{ accessToken: AccessToken; refreshToken: RefreshToken }> {
-        const session = await this.authRepo.findSessionByToken(refreshTokenId);
+        try {
+            const session = await this.authRepo.findSessionByToken(refreshTokenId);
 
-        if (!session || !session.active) {
-            throw new DomainServiceError('Session not found or revoked');
+            if (!session || !session.active) {
+                throw new DomainServiceError('Session not found or revoked');
+            }
+
+            const newRefreshToken = await this.rotateRefreshToken(refreshToken, session.id);
+
+            const accessTokenProps: AccessTokenProps = {
+                id: JwtTokenId.create(),
+                token: accessToken,
+                sessionId: session.id,
+                userId: session.userId,
+            };
+
+            const newAccessToken = AccessToken.create(accessTokenProps);
+
+            return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+        } catch (err) {
+            throw new DomainServiceError('Failed to refresh session', { cause: err });
         }
-
-        const newRefreshToken = await this.rotateRefreshToken(refreshToken, session.id);
-
-        const accessTokenId = JwtTokenId.create();
-
-        const accessTokenProps: AccessTokenProps = {
-            id: accessTokenId,
-            token: accessToken,
-            sessionId: session.id,
-            userId: session.userId,
-        };
-
-        const newAccessToken = AccessToken.create(accessTokenProps);
-
-        return { accessToken: newAccessToken, refreshToken: newRefreshToken };
     }
 
     /**
@@ -212,15 +240,20 @@ export class AuthService {
      *
      * @returns {Promise<Session | null>} A promise resolving to the session entity if found,
      *                                   or `null` if no session exists with the given ID.
+     * @throw {DomainServiceError} if authRepo throws error
      */
     async getSessionById(sessionId: SessionId): Promise<Session | null> {
-        const session = await this.authRepo.findSessionById(sessionId);
+        try {
+            const session = await this.authRepo.findSessionById(sessionId);
 
-        if (!session) {
-            return null;
+            if (!session) {
+                return null;
+            }
+
+            return session;
+        } catch (err) {
+            throw new DomainServiceError('Failed to find session by id', { cause: err });
         }
-
-        return session;
     }
 
     /**
@@ -230,15 +263,20 @@ export class AuthService {
      *
      * @returns {Promise<SessionCollection | null>} A promise resolving to a SessionCollection if sessions are found,
      *                                              or `null` if no sessions exist for the user.
+     * @throws {DomainServiceError} if authRepo throws error
      */
     async getAllSessionsForUser(userId: UserId): Promise<SessionCollection | null> {
-        const sessions = await this.authRepo.findAllSessionsForUser(userId);
+        try {
+            const sessions = await this.authRepo.findAllSessionsForUser(userId);
 
-        if (sessions.count === 0) {
-            return null;
+            if (sessions.count === 0) {
+                return null;
+            }
+
+            return sessions;
+        } catch (err) {
+            throw new DomainServiceError('Failed to get all sessions for user', { cause: err });
         }
-
-        return sessions;
     }
 
     /**
@@ -248,19 +286,25 @@ export class AuthService {
      * - Only sessions identified as expired are revoked.
      *
      * @returns {Promise<number>} A promise resolving to the number of sessions that were revoked.
+     *
+     * @throws {DomainServiceError} if authRepo throws error
      */
     async revokeExpiredSessions(): Promise<number> {
-        const expiredSessions = await this.authRepo.findExpiredSessions();
+        try {
+            const expiredSessions = await this.authRepo.findExpiredSessions();
 
-        if (expiredSessions.count === 0) {
-            return 0;
+            if (expiredSessions.count === 0) {
+                return 0;
+            }
+
+            const revokedCount = expiredSessions.revokeExpired();
+
+            await this.authRepo.saveSessions(expiredSessions);
+
+            return revokedCount;
+        } catch (err) {
+            throw new DomainServiceError('Failed to revoke expired sessions', { cause: err });
         }
-
-        const revokedCount = expiredSessions.revokeExpired();
-
-        await this.authRepo.saveSessions(expiredSessions);
-
-        return revokedCount;
     }
 
     /**
@@ -270,18 +314,24 @@ export class AuthService {
      * - Only sessions marked as inactive are revoked.
      *
      * @returns {Promise<number>} A promise resolving to the number of inactive sessions that were revoked.
+     *
+     * @throws {DomainServiceError} if authRepo throws errror
      */
     async revokeInactiveSessions(): Promise<number> {
-        const inactiveSessions = await this.authRepo.findInactiveSessions();
+        try {
+            const inactiveSessions = await this.authRepo.findInactiveSessions();
 
-        if (inactiveSessions.count === 0) {
-            return 0;
+            if (inactiveSessions.count === 0) {
+                return 0;
+            }
+
+            const inactiveCount = inactiveSessions.revokeInactive();
+
+            await this.authRepo.saveSessions(inactiveSessions);
+
+            return inactiveCount;
+        } catch (err) {
+            throw new DomainServiceError('Failed to revoke inactive sessions', { cause: err });
         }
-
-        const inactiveCount = inactiveSessions.revokeInactive();
-
-        await this.authRepo.saveSessions(inactiveSessions);
-
-        return inactiveCount;
     }
 }
