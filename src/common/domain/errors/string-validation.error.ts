@@ -1,8 +1,10 @@
-export class StringValidationError extends Error {
-    constructor(msg: string) {
-        super(msg);
-        this.name = 'StringValidationError';
+import { ErrorBase } from './base-error';
 
-        Object.setPrototypeOf(this, StringValidationError.prototype);
+export class StringValidationError extends ErrorBase {
+    code = 'STRING_VALIDATION_ERROR';
+
+    constructor(msg: string, options?: { cause?: unknown }) {
+        super(msg, options);
+        this.name = 'StringValidationError';
     }
 }

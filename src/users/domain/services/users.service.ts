@@ -135,7 +135,7 @@ export class UsersService {
      * - Username update occurs through the User entity to preserve invariants.
      *
      * @param userId {UserId} - The identifier of the user to update.
-     * @param newUsername {Username} - The new username address as a value object.
+     * @param newUsername {Username} - The new username as a value object.
      *
      * @returns {Promise<User>} A promise resolving to the updated User entity.
      *
@@ -169,7 +169,7 @@ export class UsersService {
      * - Password update occurs through the User entity to preserve invariants.
      *
      * @param userId {UserId} - The identifier of the user to update.
-     * @param newPassword {Password} - The new password address as a value object.
+     * @param newPassword {Password} - The new password as a value object.
      *
      * @returns {Promise<User>} A promise resolving to the updated User entity.
      *

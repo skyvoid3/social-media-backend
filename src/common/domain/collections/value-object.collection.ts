@@ -14,7 +14,7 @@ export abstract class ValueObjectCollection<T> {
         return this.clone(this.items.filter((i) => !this.equals(i, item)));
     }
 
-    get toArray(): T[] {
+    toArray(): T[] {
         return [...this.items];
     }
 

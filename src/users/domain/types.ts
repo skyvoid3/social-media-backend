@@ -7,6 +7,7 @@ import { UpdatedAt } from 'src/common/domain/identity/value-objects/updated-at.v
 import { MediaURL } from 'src/common/domain/identity/value-objects/media-url.vo';
 import { SessionCollection } from 'src/auth/domain/collections/session.collection';
 
+/* User properties used to create a User entity*/
 export type UserProps = {
     id: UserId;
     email: Email;

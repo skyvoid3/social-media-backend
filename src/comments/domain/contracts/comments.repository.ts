@@ -3,7 +3,7 @@ import { Comment } from '../entities/comment.entity';
 import { CommentId } from '../value-objects/comment-id.vo';
 import { CommentCollection } from '../value-objects/comment-collection.vo';
 import { PostId } from 'src/posts/domain/value-objects/post-id.vo';
-import { PaginatedSearchParams } from 'src/common/domain/search-params/paginated-search.params';
+import { Replies } from '../value-objects/replies.vo';
 
 /**
  *  Repository contract for comments domain
@@ -15,6 +15,8 @@ export interface CommentsRepository {
     save(comment: Comment): Promise<Comment>;
     delete(id: CommentId): Promise<boolean>;
     findById(id: CommentId): Promise<Comment | null>;
-    findByUser(userId: UserId, params: PaginatedSearchParams): Promise<CommentCollection>;
-    findByPost(postId: PostId, params: PaginatedSearchParams): Promise<CommentCollection>;
+    findByUser(userId: UserId, offset: number, limit: number): Promise<CommentCollection>;
+    findByPost(postId: PostId, offset: number, limit: number): Promise<CommentCollection>;
+    findReplies(parentId: CommentId): Promise<Replies>;
+    existsById(commentId: CommentId): Promise<boolean>;
 }

@@ -13,6 +13,11 @@ export class CreatedAt {
         if (!(val instanceof DateTime) || isNaN(val.toMillis())) {
             throw new ValueObjectError('Invalid createdAt timestamp');
         }
+
+        if (val.toMillis() > DateTime.now().toMillis()) {
+            throw new ValueObjectError('CreatedAt cannot be in the future');
+        }
+
         return new CreatedAt(val);
     }
 

@@ -1,8 +1,11 @@
-export class DateTimeError extends Error {
-    constructor(msg: string) {
-        super(msg);
+import { ErrorBase } from './base-error';
+
+export class DateTimeError extends ErrorBase {
+    code = 'DATE_TIME_ERROR';
+
+    constructor(msg: string, options?: { cause?: unknown }) {
+        super(msg, options);
         this.name = 'DateTimeError';
 
-        Object.setPrototypeOf(this, DateTimeError.prototype);
     }
 }

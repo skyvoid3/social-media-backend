@@ -1,8 +1,10 @@
-export class ValueObjectError extends Error {
-    constructor(msg: string) {
-        super(msg);
-        this.name = 'ValueObjectError';
+import { ErrorBase } from './base-error';
 
-        Object.setPrototypeOf(this, ValueObjectError.prototype);
+export class ValueObjectError extends ErrorBase {
+    code = 'VALUE_OBJECT_ERROR';
+
+    constructor(msg: string, options?: { cause?: unknown }) {
+        super(msg, options);
+        this.name = 'ValueObjectError';
     }
 }

@@ -10,6 +10,44 @@ import { UserId } from 'src/common/domain/identity/value-objects/user-id.vo';
 import { EntityError } from 'src/common/domain/errors/entity.error';
 import { UpdatedAt } from 'src/common/domain/identity/value-objects/updated-at.vo';
 
+/*
+ * Session entity used across the authentication domain.
+ *
+ * Each Session represents a single authenticated device or client instance
+ * belonging to a specific User. A Session is uniquely identified by its SessionId
+ * and is always associated with exactly one UserId.
+ *
+ * The Session encapsulates:
+ *   - a RefreshToken (used for issuing new access tokens)
+ *   - device context (UserAgent and IpAddress)
+ *   - lifecycle timestamps (CreatedAt, UpdatedAt, RevokedAt)
+ *
+ * The Session entity is the authoritative source of truth for whether
+ * a client session is active, revoked, or expired.
+ *
+ * Business rules enforced:
+ *   - A session cannot be created with an inactive refresh token.
+ *   - Each session may have exactly one refresh token at a time.
+ *   - Revoking a session revokes its associated refresh token.
+ *   - A revoked session cannot rotate its refresh token.
+ *   - The refresh token defines the session’s expiration (7 days by default).
+ *
+ * The Session entity also provides methods for:
+ *   - revoking the session (`revoke`)
+ *   - rotating its refresh token (`rotateRefreshToken`)
+ *   - maintaining update timestamps via an internal touch mechanism
+ *
+ * This entity guarantees immutability of core identifiers and ensures
+ * that all state transitions (revocation, rotation) are consistent with
+ * domain invariants.
+ *
+ * Example lifecycle:
+ *   1. A new session is created upon login with a valid RefreshToken.
+ *   2. The session remains active until either revoked or expired.
+ *   3. On refresh, the refresh token may be rotated — old one revoked,
+ *      new one persisted.
+ *   4. The session may be revoked manually or automatically (e.g., logout).
+ */
 export class Session {
     private _id: SessionId;
     private _createdAt: CreatedAt;
@@ -91,7 +129,7 @@ export class Session {
     }
 
     get active(): boolean {
-        return !this._revokedAt.isRevoked() && this._refreshToken.isActive();
+        return !this.revoked && this._refreshToken.active;
     }
 
     get revoked(): boolean {

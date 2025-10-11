@@ -11,25 +11,27 @@ import { MediaType } from 'src/common/domain/enums/post-media-type.enum';
 import { FileSize } from 'src/common/domain/identity/value-objects/file-size.vo';
 import { Duration } from 'src/common/domain/identity/value-objects/duration.vo';
 import { MediaCollection } from './value-objects/media-collection.vo';
-import { LikesCount } from './value-objects/likes-count.vo';
-import { CommentsCount } from './value-objects/comments-count.vo';
-import { ViewsCount } from './value-objects/views-count.vo';
+import { Counter } from 'src/common/domain/identity/value-objects/counter.vo';
 
-/* Helper props for filling entity factories */
+/* Common property interfaces for filling entity factories */
 
+/* Used inside Post entity factory*/
 export interface PostProps {
     id: PostId;
     authorId: UserId;
     title: Title;
     content: Content;
-    tags: PostTags;
-    status: PostStatus;
+    tags?: PostTags;
+    // Status is not required because Post entity uses createDraft
+    // factory and ensures all posts created are with draft status
+    // Might be changed in the future
+    status?: PostStatus;
     createdAt?: CreatedAt;
     updatedAt?: UpdatedAt;
-    media: MediaCollection;
-    likesCount: LikesCount;
-    commentsCount: CommentsCount;
-    viewsCount: ViewsCount;
+    media?: MediaCollection;
+    likesCount?: Counter;
+    commentsCount?: Counter;
+    viewsCount?: Counter;
 }
 
 export interface UpdatePostProps {

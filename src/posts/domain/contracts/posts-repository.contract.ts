@@ -15,6 +15,7 @@ export interface PostsRepository {
     save(post: Post): Promise<Post>;
     delete(id: PostId): Promise<boolean>;
     existsById(postId: PostId): Promise<boolean>;
+    findById(id: PostId): Promise<Post>;
     findByIds(ids: PostId[]): Promise<PostCollection>;
     findByUserIds(userIds: UserId[]): Promise<PostCollection>;
     findAllByUser(userId: UserId, params: PaginatedSearch): Promise<PostCollection>;

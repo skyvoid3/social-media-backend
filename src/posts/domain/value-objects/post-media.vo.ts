@@ -4,6 +4,29 @@ import { MediaURL } from 'src/common/domain/identity/value-objects/media-url.vo'
 import { FileSize } from 'src/common/domain/identity/value-objects/file-size.vo';
 import { Duration } from 'src/common/domain/identity/value-objects/duration.vo';
 
+/**
+ * Domain representation of a single media element (image, video, or audio)
+ * attached to a Post aggregate.
+ *
+ * This value object encapsulates all metadata required to represent a piece
+ * of media content in a consistent, validated, and immutable form.
+ *
+ * ## Responsibilities
+ * - Enforces the valid combination of properties for each media type.
+ * - Provides creation factories for type-safe instantiation (`createImage`, `createVideo`, `createAudio`).
+ * - Exposes value object equality semantics (`equals`, `equalsDeep`).
+ * - Encapsulates domain value objects: {@link MediaURL}, {@link FileSize}, and {@link Duration}.
+ *
+ * ## Media Type Constraints
+ * - **Image:** has `url`, `FileSize.image`, no `duration`.
+ * - **Video:** has `url`, `FileSize.video`, `duration`.
+ * - **Audio:** has `url`, `FileSize.audio`, `duration`.
+ *
+ * ## Notes
+ * - Instances are immutable and can only be created through static factory methods.
+ * - Equality can be checked either shallowly (`equals`) or deeply (`equalsDeep`).
+ * - Designed for use within the Post aggregate and related domain collections.
+ */
 export class PostMedia {
     private readonly _url: MediaURL;
     private readonly _type: MediaType;

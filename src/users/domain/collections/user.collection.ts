@@ -1,6 +1,11 @@
 import { EntityCollection } from 'src/common/domain/collections/entity.collection';
 import { User } from '../entities/user.entity';
 
+/*
+ * User collection used when there is a need of working with a User array
+ *
+ * Constructor creates additional hashmaps to enable O(1) lookups by username and email.
+ * */
 export class UserCollection extends EntityCollection<User> {
     private _byEmail: Map<string, User>;
     private _byUsername: Map<string, User>;

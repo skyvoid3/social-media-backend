@@ -4,13 +4,26 @@ import { IpAddress } from '../value-objects/ip-address.vo';
 import { UserAgent } from '../value-objects/user-agent.vo';
 import { ValueObjectError } from 'src/common/domain/errors/value-object.error';
 
-/*
- * SessionCollection used anywhere where there is need of working with Session entity array
+/**
+ * Domain collection representing a bounded set of {@link Session} entities.
  *
- * Inherits from EntityCollection base class
+ * Used when working with multiple Session instances belonging to the same aggregate root.
+ * This collection provides convenient domain-level operations such as add, remove, and getById.
  *
- * The methods are in O(n) time, although its not a big concern
- * because SessionCollection can not have more than 5 items inside
+ * Inherits from the {@link EntityCollection} base class.
+ *
+ * ## Performance
+ * - `add`, `remove`, and `getById` — O(1)
+ * - Other operations — O(n)
+ *   (This is acceptable since the collection is intentionally small.)
+ *
+ * ## Constraints
+ * - Maximum of 5 items are allowed at any time.
+ *   This boundary is enforced by domain rules to prevent excessive session buildup.
+ *
+ * ## Notes
+ * - Designed for use within the domain layer — not a persistence structure.
+ * - Imposes logical limits to maintain aggregate consistency.
  */
 export class SessionCollection extends EntityCollection<Session> {
     private readonly maxItems = 5;

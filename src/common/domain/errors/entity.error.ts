@@ -1,8 +1,10 @@
-export class EntityError extends Error {
-    constructor(msg: string) {
-        super(msg);
-        this.name = 'EntityError';
+import { ErrorBase } from './base-error';
 
-        Object.setPrototypeOf(this, EntityError.prototype);
+export class EntityError extends ErrorBase {
+    code = 'ENTITY_ERROR';
+
+    constructor(msg: string, options?: { cause?: unknown }) {
+        super(msg, options);
+        this.name = 'EntityError';
     }
 }

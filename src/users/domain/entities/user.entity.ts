@@ -10,6 +10,56 @@ import { SessionId } from 'src/auth/domain/value-objects/session-id.vo';
 import { MediaURL } from 'src/common/domain/identity/value-objects/media-url.vo';
 import { SessionCollection } from 'src/auth/domain/collections/session.collection';
 
+/*
+ * User entity used across the authentication and identity domain.
+ *
+ * The User represents the aggregate root of the identity system.
+ * It is the central entity responsible for managing a person’s authentication data,
+ * profile information, and active sessions.
+ *
+ * The User entity encapsulates:
+ *   - unique identity (UserId)
+ *   - credentials (Email, Password, Username)
+ *   - optional avatar (MediaURL)
+ *   - lifecycle timestamps (CreatedAt, UpdatedAt)
+ *   - session lifecycle management (SessionCollection)
+ *
+ * Domain rules and invariants enforced:
+ *   - A User is uniquely identified by their UserId and Email.
+ *   - The User entity is the *only aggregate root* capable of managing Sessions.
+ *   - Session creation and removal must occur through domain-safe methods
+ *     (`addSession`, `removeSession`), ensuring invariants are respected.
+ *   - Updates to username, email, password, or avatar always trigger an `UpdatedAt` change.
+ *   - A User’s core identifiers (id, email) are immutable once created.
+ *
+ * Behavior provided:
+ *   - `addSession(session: Session)`: Adds a new Session to the user’s active session collection.
+ *   - `removeSession(sessionId: SessionId)`: Removes (revokes) a specific Session.
+ *   - `getSession(sessionId: SessionId)`: Retrieves a specific Session instance by its ID.
+ *   - `updateUsername`, `updateEmail`, `updatePassword`, `updateAvatar`:
+ *       Safely mutate user profile fields while maintaining audit consistency.
+ *   - `activeSessions`: Returns a filtered view of currently active sessions
+ *       (not revoked or expired).
+ *
+ * Internal mechanics:
+ *   - `touch()`: Updates the `UpdatedAt` timestamp whenever mutable state changes.
+ *   - All updates and mutations occur through controlled domain methods — direct
+ *     mutation of internal state is prohibited.
+ *
+ * Domain relationships:
+ *   - Owns many `Session` entities through a `SessionCollection`.
+ *   - Each Session references this User via a `UserId`.
+ *   - The aggregate root boundary ensures sessions cannot exist without a User.
+ *
+ * Example lifecycle:
+ *   1. A User is created via the `create()` factory, initialized with basic credentials.
+ *   2. Upon login, a new Session (with a valid RefreshToken) is added to the user.
+ *   3. The user may have multiple active sessions (across devices).
+ *   4. Profile changes (email, username, avatar, password) are applied safely,
+ *      automatically updating `UpdatedAt`.
+ *   5. When a session is revoked or expired, the User aggregate reflects that
+ *      through its `sessions` collection.
+ */
 export class User {
     private _id: UserId;
     private _email: Email;
@@ -113,6 +163,6 @@ export class User {
 
     /* Returns an array of active sessions*/
     get activeSessions(): Session[] {
-        return this._sessions.active;
+        return this._sessions.activeSessions;
     }
 }

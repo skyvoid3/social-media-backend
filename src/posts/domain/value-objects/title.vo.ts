@@ -1,5 +1,11 @@
 import { ValueObjectError } from 'src/common/domain/errors/value-object.error';
 
+/**
+ * Domain value object representing a Post title.
+ *
+ * Ensures basic validation and normalization
+ * for title text within the domain layer.
+ */
 export class Title {
     private constructor(private readonly val: string) {}
 
